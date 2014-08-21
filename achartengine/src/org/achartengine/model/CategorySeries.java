@@ -17,6 +17,7 @@ package org.achartengine.model;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.List;
 
 /**

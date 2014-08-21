@@ -172,6 +172,8 @@ public class GraphicalView extends View {
     int left = mRect.left;
     int width = mRect.width();
     int height = mRect.height();
+    width = getMeasuredWidth();
+    height = getMeasuredHeight();
     if (mRenderer.isInScroll()) {
       top = 0;
       left = 0;

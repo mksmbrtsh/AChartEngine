@@ -16,6 +16,7 @@
 package org.achartengine.chart;
 
 import java.text.DateFormat;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -24,9 +25,11 @@ import java.util.List;
 import org.achartengine.model.XYMultipleSeriesDataset;
 import org.achartengine.model.XYSeries;
 import org.achartengine.renderer.XYMultipleSeriesRenderer;
+import org.achartengine.renderer.XYMultipleSeriesRenderer.Orientation;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Paint.Align;
 
 /**
  * The time chart rendering class.
@@ -36,6 +39,8 @@ public class TimeChart extends LineChart {
   public static final String TYPE = "Time";
   /** The number of milliseconds in a day. */
   public static final long DAY = 24 * 60 * 60 * 1000;
+  private static final double HOUR = 60 * 60 * 1000;
+  private static final double MINUTE = 60 * 1000;
   /** The date format pattern to be used in formatting the X axis labels. */
   private String mDateFormat;
   /** The starting point for labels. */
@@ -104,7 +109,8 @@ public class TimeChart extends LineChart {
           canvas
               .drawLine(xLabel, bottom, xLabel, bottom + mRenderer.getLabelsTextSize() / 3, paint);
           drawText(canvas, format.format(new Date(label)), xLabel,
-              bottom + mRenderer.getLabelsTextSize() * 4 / 3 + mRenderer.getXLabelsPadding(), paint, mRenderer.getXLabelsAngle());
+              bottom + mRenderer.getLabelsTextSize() * 4 / 3 + mRenderer.getXLabelsPadding(),
+              paint, mRenderer.getXLabelsAngle());
         }
         if (showGridY) {
           paint.setColor(mRenderer.getGridColor(0));
@@ -115,6 +121,87 @@ public class TimeChart extends LineChart {
     drawXTextLabels(xTextLabelLocations, canvas, paint, true, left, top, bottom, xPixelsPerUnit,
         minX, maxX);
   }
+
+  @Override
+  protected void drawYLabels(java.util.Map<Integer, java.util.List<Double>> allYLabels,
+      Canvas canvas, Paint paint, int maxScaleNumber, int left, int right, int bottom,
+      double[] yPixelsPerUnit, double[] minY) {
+    Orientation or = mRenderer.getOrientation();
+    boolean showGridX = mRenderer.isShowGridX();
+    boolean showLabels = mRenderer.isShowLabels();
+    for (int i = 0; i < maxScaleNumber; i++) {
+      paint.setTextAlign(mRenderer.getYLabelsAlign(i));
+      List<Double> yLabels = allYLabels.get(i);
+      int length = yLabels.size();
+      for (int j = 0; j < length; j++) {
+        double label = yLabels.get(j);
+        Align axisAlign = mRenderer.getYAxisAlign(i);
+        boolean textLabel = mRenderer.getYTextLabel(label, i) != null;
+        float yLabel = (float) (bottom - yPixelsPerUnit[i] * (label - minY[i]));
+        if (or == Orientation.HORIZONTAL) {
+          if (showLabels && !textLabel) {
+            paint.setColor(mRenderer.getYLabelsColor(i));
+            if (axisAlign == Align.LEFT) {
+              canvas.drawLine(left + getLabelLinePos(axisAlign), yLabel, left, yLabel, paint);
+              drawText(canvas, getLabel(mRenderer.getLabelFormat(), label),
+                  left - mRenderer.getYLabelsPadding(),
+                  yLabel - mRenderer.getYLabelsVerticalPadding(), paint,
+                  mRenderer.getYLabelsAngle());
+            } else {
+              canvas.drawLine(right, yLabel, right + getLabelLinePos(axisAlign), yLabel, paint);
+              drawText(canvas, getLabel(mRenderer.getLabelFormat(), label),
+                  right + mRenderer.getYLabelsPadding(),
+                  yLabel - mRenderer.getYLabelsVerticalPadding(), paint,
+                  mRenderer.getYLabelsAngle());
+            }
+          }
+          if (showGridX) {
+            paint.setColor(mRenderer.getGridColor(i));
+            canvas.drawLine(left, yLabel, right, yLabel, paint);
+          }
+        } else if (or == Orientation.VERTICAL) {
+          if (showLabels && !textLabel) {
+            paint.setColor(mRenderer.getYLabelsColor(i));
+            canvas.drawLine(right - getLabelLinePos(axisAlign), yLabel, right, yLabel, paint);
+            drawText(canvas, getLabel(mRenderer.getLabelFormat(), label),
+                right + 10 + mRenderer.getYLabelsPadding(),
+                yLabel - mRenderer.getYLabelsVerticalPadding(), paint, mRenderer.getYLabelsAngle());
+          }
+          if (showGridX) {
+            paint.setColor(mRenderer.getGridColor(i));
+            canvas.drawLine(right, yLabel, left, yLabel, paint);
+          }
+        }
+      }
+    }
+
+  };
+
+  private int getLabelLinePos(Align align) {
+    int pos = 4;
+    if (align == Align.LEFT) {
+      pos = -pos;
+    }
+    return pos;
+  }
+
+  @Override
+  protected String getLabel(NumberFormat format, double time) {
+    int day;
+    int hours;
+    int minutes;
+    int seconds;
+    day = (int) (time / (24 * 60 * 60 * 1000));
+    hours = (int) (time / (60 * 60 * 1000)) - day * 24;
+    minutes = (int) (time / (60 * 1000)) - day * 24 * 60 - 60 * hours;
+    seconds = (int) (time / 1000) - day * 24 * 60 * 60 - 60 * 60 * hours - 60 * minutes;
+    String s = new String();
+    s = String.format("%10d:%02d:%02d", hours + day * 24, minutes, seconds);
+    return s;
+  }
+  private SimpleDateFormat m = new SimpleDateFormat("EEE hh:mm:ss");
+  private SimpleDateFormat h = new SimpleDateFormat("EEE hh:mm");
+  private SimpleDateFormat w = new SimpleDateFormat("EEE hh:mm");
 
   /**
    * Returns the date format pattern to be used, based on the date range.
@@ -135,11 +222,14 @@ public class TimeChart extends LineChart {
     }
     DateFormat format = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM);
     double diff = end - start;
-    if (diff > DAY && diff < 5 * DAY) {
-      format = SimpleDateFormat.getDateTimeInstance(SimpleDateFormat.SHORT, SimpleDateFormat.SHORT);
-    } else if (diff < DAY) {
-      format = SimpleDateFormat.getTimeInstance(SimpleDateFormat.MEDIUM);
-    }
+    if (diff <= MINUTE)
+      format = m; 
+    else if (diff <= DAY)
+      format = h;
+    else if (diff >= DAY && diff <= 7 * DAY)
+      format = w;
+    else
+      format = SimpleDateFormat.getDateInstance(SimpleDateFormat.SHORT);
     return format;
   }
 
@@ -198,7 +288,6 @@ public class TimeChart extends LineChart {
       count = 25;
     }
 
-    
     final double cycleMath = (max - min) / count;
     if (cycleMath <= 0) {
       return result;

@@ -16,6 +16,7 @@
 package org.achartengine.chart;
 
 import java.util.ArrayList;
+import java.util.Formatter;
 import java.util.List;
 
 import org.achartengine.model.CategorySeries;
@@ -38,6 +39,7 @@ public class PieChart extends RoundChart {
   /** Handles returning values when tapping on PieChart. */
   private PieMapper mPieMapper;
 
+  
   /**
    * Builds a new pie chart instance.
    * 
