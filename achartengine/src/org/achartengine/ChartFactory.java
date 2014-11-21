@@ -27,6 +27,7 @@ import org.achartengine.chart.PieChart;
 import org.achartengine.chart.RangeBarChart;
 import org.achartengine.chart.ScatterChart;
 import org.achartengine.chart.TimeChart;
+import org.achartengine.chart.TimeValueChart;
 import org.achartengine.chart.XYChart;
 import org.achartengine.model.CategorySeries;
 import org.achartengine.model.MultipleCategorySeries;
@@ -145,6 +146,14 @@ public class ChartFactory {
     return new GraphicalView(context, chart);
   }
 
+  public static final GraphicalView getTimeValueChartView(Context context,
+      XYMultipleSeriesDataset dataset, XYMultipleSeriesRenderer renderer, String format) {
+    checkParameters(dataset, renderer);
+    TimeValueChart chart = new TimeValueChart(dataset, renderer);
+    chart.setDateFormat(format);
+    return new GraphicalView(context, chart);
+  }
+  
   /**
    * Creates a bar chart view.
    * 
